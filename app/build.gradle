@@ -15,4 +15,5 @@ android {
 
 dependencies {
   compile 'com.squareup.okhttp:okhttp:2.4.0'
+  compile 'nl.qbusict:cupboard:2.1.2'
 }

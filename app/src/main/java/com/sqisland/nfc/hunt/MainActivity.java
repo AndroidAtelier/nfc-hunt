@@ -1,29 +1,20 @@
 package com.sqisland.nfc.hunt;
 
 import android.app.Activity;
-import android.app.PendingIntent;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.nfc.NfcAdapter;
-import android.nfc.tech.IsoDep;
-import android.nfc.tech.MifareClassic;
-import android.nfc.tech.MifareUltralight;
-import android.nfc.tech.Ndef;
-import android.nfc.tech.NfcA;
-import android.nfc.tech.NfcB;
-import android.nfc.tech.NfcF;
-import android.nfc.tech.NfcV;
 import android.os.Bundle;
 import android.os.Environment;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 
 import com.squareup.okhttp.Authenticator;
 import com.squareup.okhttp.Callback;
 import com.squareup.okhttp.Credentials;
-import com.squareup.okhttp.MediaType;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
@@ -39,9 +30,6 @@ import java.util.HashMap;
 
 public class MainActivity extends Activity {
   private static final String TAG = "nfc_hunt";
-  
-  public static final MediaType MEDIA_TYPE_JSON
-      = MediaType.parse("application/json; charset=utf-8");
 
   private static final String USERNAME    = "9242bc24-02ac-45c0-bb2f-53f6f06ae7d9";
   private static final String PASSWORD    = "HxoKXnZqz4Qu";
@@ -53,28 +41,11 @@ public class MainActivity extends Activity {
   private static final String NFC_TISSUES = "370700001A3353";
   private static final HashMap<String, String> things = new HashMap<>();
 
-
   OkHttpClient client = new OkHttpClient();
-  OkHttpClient client2 = new OkHttpClient();
 
   private TextView textView;
   private TextView ttsInputView;
   private TextView statusView;
-
-  // https://gist.github.com/luixal/5768921
-  // List of NFC technologies detected
-  private final String[][] techList = new String[][] {
-      new String[] {
-          NfcA.class.getName(),
-          NfcB.class.getName(),
-          NfcF.class.getName(),
-          NfcV.class.getName(),
-          IsoDep.class.getName(),
-          MifareClassic.class.getName(),
-          MifareUltralight.class.getName(),
-          Ndef.class.getName()
-      }
-  };
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -103,19 +74,7 @@ public class MainActivity extends Activity {
   @Override
   protected void onResume() {
     super.onResume();
-
-    PendingIntent pendingIntent = PendingIntent.getActivity(
-        this, 0, new Intent(this, getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
-
-    IntentFilter filter = new IntentFilter();
-    filter.addAction(NfcAdapter.ACTION_TAG_DISCOVERED);
-    filter.addAction(NfcAdapter.ACTION_NDEF_DISCOVERED);
-    filter.addAction(NfcAdapter.ACTION_TECH_DISCOVERED);
-
-    // Enable foreground dispatch for getting intent from NFC event
-    NfcAdapter nfcAdapter = NfcAdapter.getDefaultAdapter(this);
-    nfcAdapter.enableForegroundDispatch(
-        this, pendingIntent, new IntentFilter[]{filter}, this.techList);
+    NFCUtil.enable(this);
   }
 
   @Override
@@ -129,30 +88,37 @@ public class MainActivity extends Activity {
 
   @Override
   protected void onNewIntent(Intent intent) {
-    if (intent.getAction().equals(NfcAdapter.ACTION_TAG_DISCOVERED)) {
-      String nfcTag = ByteArrayToHexString(intent.getByteArrayExtra(NfcAdapter.EXTRA_ID));
-      String value = nfcTag;
-      if (things.containsKey(nfcTag)) {
-        value = things.get(nfcTag);
-      }
-      textView.setText(value);
-      Log.e(TAG, nfcTag);
+    String nfcTag = NFCUtil.extractTag(intent);
+    if (nfcTag == null) {
+      return;
     }
+
+    String value = nfcTag;
+    if (things.containsKey(nfcTag)) {
+      value = things.get(nfcTag);
+    }
+    textView.setText(value);
+    Log.e(TAG, nfcTag);
   }
 
-  private String ByteArrayToHexString(byte [] inarray) {
-    int i, j, in;
-    String [] hex = { "0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F" };
-    String out= "";
+  @Override
+  public boolean onCreateOptionsMenu(Menu menu) {
+    // Inflate the menu; this adds items to the action bar if it is present.
+    getMenuInflater().inflate(R.menu.menu_main, menu);
+    return true;
+  }
 
-    for (j = 0 ; j < inarray.length ; ++j) {
-      in = (int) inarray[j] & 0xff;
-      i = (in >> 4) & 0x0f;
-      out += hex[i];
-      i = in & 0x0f;
-      out += hex[i];
+  @Override
+  public boolean onOptionsItemSelected(MenuItem item) {
+    int id = item.getItemId();
+
+    if (id == R.id.action_edit_tag) {
+      Intent intent = new Intent(this, EditTagActivity.class);
+      startActivity(intent);
+      return true;
     }
-    return out;
+
+    return super.onOptionsItemSelected(item);
   }
 
   public void textToSpeech(View v) {

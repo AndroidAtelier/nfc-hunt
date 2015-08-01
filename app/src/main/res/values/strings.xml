@@ -3,4 +3,9 @@
   <string name="text_to_speech">Text to speech</string>
   <string name="previously_fetched">Previously fetched</string>
   <string name="fetched">Fetched</string>
+  <string name="action_edit_tag">Add/Edit Tag</string>
+  <string name="title_edit_tag">Add/Edit Tag</string>
+  <string name="add_tag_instructions">Scan NFC tag to add or edit</string>
+  <string name="save">Save</string>
+  <string name="saved">%1$s saved</string>
 </resources>
