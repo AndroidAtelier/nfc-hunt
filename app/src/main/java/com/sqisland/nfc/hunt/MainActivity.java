@@ -14,10 +14,43 @@ import android.nfc.tech.NfcB;
 import android.nfc.tech.NfcF;
 import android.nfc.tech.NfcV;
 import android.os.Bundle;
+import android.os.Environment;
+import android.text.TextUtils;
+import android.util.Log;
+import android.view.View;
 import android.widget.TextView;
 
+import com.squareup.okhttp.Authenticator;
+import com.squareup.okhttp.Callback;
+import com.squareup.okhttp.Credentials;
+import com.squareup.okhttp.MediaType;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.RequestBody;
+import com.squareup.okhttp.Response;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.Proxy;
+import java.net.URLEncoder;
+
 public class MainActivity extends Activity {
+  private static final String TAG = "nfc_hunt";
+  
+  public static final MediaType MEDIA_TYPE_JSON
+      = MediaType.parse("application/json; charset=utf-8");
+
+  private static final String USERNAME = "9242bc24-02ac-45c0-bb2f-53f6f06ae7d9";
+  private static final String PASSWORD = "HxoKXnZqz4Qu";
+
+  OkHttpClient client = new OkHttpClient();
+
   private TextView textView;
+  private TextView ttsInputView;
+  private TextView statusView;
 
   // https://gist.github.com/luixal/5768921
   // List of NFC technologies detected
@@ -33,11 +66,27 @@ public class MainActivity extends Activity {
           Ndef.class.getName()
       }
   };
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
     textView = (TextView) findViewById(R.id.text);
+    ttsInputView = (TextView) findViewById(R.id.tts_input);
+    statusView = (TextView) findViewById(R.id.status);
+
+    client.setAuthenticator(new Authenticator() {
+      @Override
+      public Request authenticate(Proxy proxy, Response response) throws IOException {
+        String credential = Credentials.basic(USERNAME, PASSWORD);
+        return response.request().newBuilder().header("Authorization", credential).build();
+      }
+
+      @Override
+      public Request authenticateProxy(Proxy proxy, Response response) throws IOException {
+        return null;
+      }
+    });
   }
 
   @Override
@@ -87,5 +136,89 @@ public class MainActivity extends Activity {
       out += hex[i];
     }
     return out;
+  }
+
+  public void textToSpeech(View v) {
+    String text = ttsInputView.getText().toString();
+    if (TextUtils.isEmpty(text)) {
+      return;
+    }
+
+    try {
+      fetchSoundFile(text);
+    } catch (IOException e) {
+      Log.e(TAG, "Failed to fetch sound", e);
+      statusView.setText(e.getMessage());
+    }
+  }
+
+  private void fetchSoundFile(String text) throws IOException {
+    final File file = getSoundFile(text);
+
+    if (file.isFile()) {
+      statusView.setText(R.string.previously_fetched);
+      Log.e(TAG, file.toString());
+      return;
+    }
+
+    String json = "{\"text\":\"" + text + "\"}";
+    Request request = new Request.Builder()
+        .url("https://stream.watsonplatform.net/text-to-speech/api/v1/synthesize")
+        .addHeader("Content-Type", "application/json")
+        .addHeader("Accept", "audio/wav")
+        .post(RequestBody.create(MEDIA_TYPE_JSON, json))
+        .build();
+
+    client.newCall(request).enqueue(new Callback() {
+      @Override public void onFailure(Request request, final IOException e) {
+        runOnUiThread(new Runnable() {
+          @Override
+          public void run() {
+            statusView.setText(e.getMessage());
+          }
+        });
+        Log.e(TAG, Log.getStackTraceString(e));
+      }
+
+      @Override public void onResponse(Response response) throws IOException {
+        if (!response.isSuccessful()) {
+          throw new IOException("Unexpected code " + response);
+        }
+
+        writeToFile(response.body().byteStream(), file);
+        Log.e(TAG, file.toString());
+        runOnUiThread(new Runnable() {
+          @Override
+          public void run() {
+            statusView.setText(R.string.fetched);
+          }
+        });
+      }
+    });
+  }
+
+  private File getSoundFile(String text) {
+    File dir = new File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "nfc_hunt");
+    if (!dir.isDirectory()) {
+      dir.mkdir();
+    }
+
+    String filename = "output.wav";
+    try {
+      filename = URLEncoder.encode(text, "utf-8") + ".wav";
+    } catch (UnsupportedEncodingException e) {
+      Log.e(TAG, "Error encoding filename" + e);
+    }
+    return new File(dir, filename);
+  }
+
+  private void writeToFile(InputStream input, File file) throws IOException {
+    FileOutputStream output = new FileOutputStream(file);
+    int bufferSize = 1024;
+    byte[] buffer = new byte[bufferSize];
+    int len;
+    while ((len = input.read(buffer)) != -1) {
+      output.write(buffer, 0, len);
+    }
   }
 }
