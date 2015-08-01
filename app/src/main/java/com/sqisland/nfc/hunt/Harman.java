@@ -27,11 +27,14 @@ public class Harman {
     HarmanService service = restAdapter.create(HarmanService.class);
 
     public void initSession() {
+      Log.e(MainActivity.TAG, "initSession");
         service.getSession(100, new Callback<Session>() {
             @Override
             public void success(Session session, Response response) {
                 Log.e(MainActivity.TAG, session.SessionID);
                 sessionID = session.SessionID;
+                deviceID = "163093349480624";
+                addDeviceToSession();
             }
 
             @Override
@@ -84,7 +87,7 @@ public class Harman {
         service.addDeviceToSession(getSessionID(), getDeviceID(), new Callback<GenericBooleanResponse>() {
             @Override
             public void success(GenericBooleanResponse genericBooleanResponse, Response response) {
-                Log.e(MainActivity.TAG, "session add result = " + genericBooleanResponse);
+                Log.e(MainActivity.TAG, "session add result = " + genericBooleanResponse.Result);
             }
 
             @Override
@@ -109,7 +112,8 @@ public class Harman {
     }
 
     public void playFromUrlToAllConnectedSpeakers(final String url) {
-        service.playFromUrlToAllConnectedSpeakers(getSessionID(), url, new Callback<GenericBooleanResponse>() {
+      Log.e(MainActivity.TAG, "Playing to all: " + url + " with sessionID " + getSessionID() + ", deviceID " + getDeviceID());
+      service.playFromUrlToAllConnectedSpeakers(getSessionID(), url, new Callback<GenericBooleanResponse>() {
             @Override
             public void success(GenericBooleanResponse genericBooleanResponse, Response response) {
                 Log.e(MainActivity.TAG, "playing from " + url + " to all connected speakers");
@@ -123,6 +127,7 @@ public class Harman {
     }
 
     public void playFromUrlToSelectedSpeaker(final String url) {
+      Log.e(MainActivity.TAG, "Playing to specific: " + url + " with sessionID " + getSessionID() + ", deviceID " + getDeviceID());
         service.playFromUrlToASelectedSpeaker(getSessionID(), url, getDeviceID(), new Callback<GenericBooleanResponse>() {
             @Override
             public void success(GenericBooleanResponse genericBooleanResponse, Response response) {

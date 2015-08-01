@@ -6,7 +6,10 @@ import android.database.sqlite.SQLiteDatabase;
 import android.nfc.NfcAdapter;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.text.TextUtils;
+import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -27,6 +30,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.lang.ref.WeakReference;
 import java.net.Proxy;
 import java.net.URLEncoder;
 import java.util.HashMap;
@@ -45,7 +49,14 @@ public class MainActivity extends Activity {
   private static final String NFC_MITT    = "3707000020E0A6";
   private static final String NFC_HAT     = "370700001A3118";
   private static final String NFC_TISSUES = "370700001A3353";
-  private static final HashMap<String, String> things = new HashMap<>();
+
+  private final DelayHandler handler = new DelayHandler(this);
+
+  private final HashMap<String, String> things = new HashMap<>();
+  private final String[] names = new String[] {
+    NFC_DUCK, NFC_FROG, NFC_HAT, NFC_MITT, NFC_SHOE, NFC_TISSUES
+  };
+  private int numItemsFound = 0;
 
   OkHttpClient client = new OkHttpClient();
 
@@ -61,6 +72,8 @@ public class MainActivity extends Activity {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
+    harman.initSession();
+
     textView = (TextView) findViewById(R.id.text);
     ttsInputView = (TextView) findViewById(R.id.tts_input);
     statusView = (TextView) findViewById(R.id.status);
@@ -70,19 +83,19 @@ public class MainActivity extends Activity {
     DatabaseUtility databaseUtility = new DatabaseUtility(this);
     db = databaseUtility.getWritableDatabase();
 
-    harman.initSession();
+
 
     client.setAuthenticator(new Authenticator() {
-        @Override
-        public Request authenticate(Proxy proxy, Response response) throws IOException {
-            String credential = Credentials.basic(USERNAME, PASSWORD);
-            return response.request().newBuilder().header("Authorization", credential).build();
-        }
+      @Override
+      public Request authenticate(Proxy proxy, Response response) throws IOException {
+        String credential = Credentials.basic(USERNAME, PASSWORD);
+        return response.request().newBuilder().header("Authorization", credential).build();
+      }
 
-        @Override
-        public Request authenticateProxy(Proxy proxy, Response response) throws IOException {
-            return null;
-        }
+      @Override
+      public Request authenticateProxy(Proxy proxy, Response response) throws IOException {
+        return null;
+      }
     });
 
   }
@@ -117,6 +130,24 @@ public class MainActivity extends Activity {
     }
 
     textView.setText(loadLabel(nfcTag));
+
+    if (numItemsFound == names.length) {
+      return;
+    }
+
+    String expectedTag = names[numItemsFound];
+    if (expectedTag.equals(nfcTag)) {
+      playSound("Correct");
+      numItemsFound += 1;
+      if (numItemsFound == names.length) {
+        // congrats
+      } else {
+        handler.sendEmptyMessageDelayed(DelayHandler.FIND, DateUtils.SECOND_IN_MILLIS * 10);
+      }
+    } else {
+      playSound("Not");
+    }
+
     Log.e(TAG, nfcTag);
   }
 
@@ -154,15 +185,39 @@ public class MainActivity extends Activity {
     }
   }
 
-    public void connectHarman(View v) {
-        Log.e(TAG, "Harman connect button pressed");
+  public void connectHarman(View v) {
+    Log.e(TAG, "Harman connect button pressed");
 
-        harman.getDeviceList();
-        harman.addDeviceToSession();
-        harman.playFromUrlToSelectedSpeaker("http://tardis.nu/~sepideh/CorrectDuck.mp3");
-        //harman.playFromUrl("http://seonman.github.io/music/hyolyn.mp3");
-        //harman.playFromUrlToAllConnectedSpeakeres("https://drive.google.com/folderview?id=0B9p3bA8lBIFrfkVxRnFzNVl6NTZLWnlKdUhPbU9MdkJUUnh2b2RORmxyTTNmRTZOaGFXejg&usp=sharing");
+    playSound("Find");
+    // harman.playFromUrlToSelectedSpeaker("http://tardis.nu/~sepideh/LocateDuck.mp3");
+    //harman.playFromUrl("http://seonman.github.io/music/hyolyn.mp3");
+    //harman.playFromUrlToAllConnectedSpeakeres("https://drive.google.com/folderview?id=0B9p3bA8lBIFrfkVxRnFzNVl6NTZLWnlKdUhPbU9MdkJUUnh2b2RORmxyTTNmRTZOaGFXejg&usp=sharing");
+  }
+
+  public void prepare(View v) {
+    String[] prefixes = new String[] { "Find", "Correct", "Not" };
+
+    for (String prefix : prefixes) {
+      for (int i = 0; i < names.length; ++i) {
+        playSound(prefix, i);
+      }
     }
+  }
+
+  public void reset(View v) {
+    numItemsFound = 0;
+  }
+
+  private void playSound(String prefix) {
+    playSound(prefix, numItemsFound);
+  }
+
+  private void playSound(String prefix, int position) {
+    String tag = names[position];
+    String name = things.get(tag);
+    harman.playFromUrlToSelectedSpeaker("http://tardis.nu/~sepideh/" + prefix + name + ".mp3");
+    // harman.playFromUrlToAllConnectedSpeakers("http://tardis.nu/~sepideh/" + prefix + name + ".mp3");
+  }
 
   private void fetchSoundFile(String text) throws IOException {
     final File file = getSoundFile(text);
@@ -242,11 +297,11 @@ public class MainActivity extends Activity {
 
   private void populateThings() {
     things.put(NFC_DUCK, "Duck");
-    things.put(NFC_SHOE, "Shiny shoe");
+    things.put(NFC_SHOE, "ShinyShoes");
     things.put(NFC_FROG, "Frog");
-    things.put(NFC_MITT, "Oven mitt");
-    things.put(NFC_HAT, "Green hat");
-    things.put(NFC_TISSUES, "Tissue box");
+    things.put(NFC_MITT, "OvenMitt");
+    things.put(NFC_HAT, "GreenHat");
+    things.put(NFC_TISSUES, "TissueBox");
   }
 
   private String loadLabel(String tag) {
@@ -257,5 +312,26 @@ public class MainActivity extends Activity {
       return tag;
     }
     return item.label;
+  }
+
+  private static class DelayHandler extends Handler {
+    public static final int FIND = 0;
+    private final WeakReference<MainActivity> ref;
+
+    public DelayHandler(MainActivity activity) {
+      ref = new WeakReference<>(activity);
+    }
+
+    @Override
+    public void handleMessage(Message msg) {
+      super.handleMessage(msg);
+
+      MainActivity activity = ref.get();
+      if (activity == null) {
+        return;
+      }
+
+      activity.playSound("Find");
+    }
   }
 }

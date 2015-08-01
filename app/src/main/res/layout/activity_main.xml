@@ -9,6 +9,24 @@
   android:paddingRight="@dimen/activity_horizontal_margin"
   android:paddingTop="@dimen/activity_vertical_margin"
   tools:context=".MainActivity">
+  <Button
+    android:id="@+id/btn_harman_connect"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="@string/btn_harman_connect_label"
+    android:onClick="connectHarman"/>
+  <Button
+    android:id="@+id/reset_button"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="@string/reset"
+    android:onClick="reset"/>
+  <Button
+    android:id="@+id/prepare"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="@string/prepare_label"
+    android:onClick="prepare"/>
   <TextView
     android:id="@+id/text"
     android:layout_width="match_parent"
@@ -20,23 +38,18 @@
     android:id="@+id/tts_input"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:visibility="gone"
     android:text="@string/app_name"/>
   <Button
     android:id="@+id/tts_button"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:text="@string/text_to_speech"
+    android:visibility="gone"
     android:onClick="textToSpeech"/>
   <TextView
     android:id="@+id/status"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     tools:context=".MainActivity"/>
-
-    <Button
-        android:id="@+id/btn_harman_connect"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/btn_harman_connect_label"
-        android:onClick="connectHarman"/>
 </LinearLayout>
