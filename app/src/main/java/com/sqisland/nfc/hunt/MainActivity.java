@@ -2,6 +2,7 @@ package com.sqisland.nfc.hunt;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.database.sqlite.SQLiteDatabase;
 import android.nfc.NfcAdapter;
 import android.os.Bundle;
 import android.os.Environment;
@@ -12,6 +13,8 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 
+import com.sqisland.nfc.hunt.database.DatabaseUtility;
+import com.sqisland.nfc.hunt.database.NfcItem;
 import com.squareup.okhttp.Authenticator;
 import com.squareup.okhttp.Callback;
 import com.squareup.okhttp.Credentials;
@@ -27,6 +30,8 @@ import java.io.UnsupportedEncodingException;
 import java.net.Proxy;
 import java.net.URLEncoder;
 import java.util.HashMap;
+
+import static nl.qbusict.cupboard.CupboardFactory.cupboard;
 
 public class MainActivity extends Activity {
   private static final String TAG = "nfc_hunt";
@@ -47,14 +52,21 @@ public class MainActivity extends Activity {
   private TextView ttsInputView;
   private TextView statusView;
 
+  private SQLiteDatabase db;
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
+
     textView = (TextView) findViewById(R.id.text);
     ttsInputView = (TextView) findViewById(R.id.tts_input);
     statusView = (TextView) findViewById(R.id.status);
+
     populateThings();
+
+    DatabaseUtility databaseUtility = new DatabaseUtility(this);
+    db = databaseUtility.getWritableDatabase();
 
     client.setAuthenticator(new Authenticator() {
       @Override
@@ -93,11 +105,7 @@ public class MainActivity extends Activity {
       return;
     }
 
-    String value = nfcTag;
-    if (things.containsKey(nfcTag)) {
-      value = things.get(nfcTag);
-    }
-    textView.setText(value);
+    textView.setText(loadLabel(nfcTag));
     Log.e(TAG, nfcTag);
   }
 
@@ -214,5 +222,15 @@ public class MainActivity extends Activity {
     things.put(NFC_MITT, "Oven mitt");
     things.put(NFC_HAT, "Green hat");
     things.put(NFC_TISSUES, "Tissue box");
+  }
+
+  private String loadLabel(String tag) {
+    NfcItem item = cupboard().withDatabase(db)
+        .query(NfcItem.class)
+        .withSelection("tag = ?", tag).get();
+    if (item == null) {
+      return tag;
+    }
+    return item.label;
   }
 }

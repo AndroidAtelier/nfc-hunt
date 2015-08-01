@@ -15,8 +15,6 @@ import com.sqisland.nfc.hunt.database.NfcItem;
 import static nl.qbusict.cupboard.CupboardFactory.cupboard;
 
 public class EditTagActivity extends Activity {
-  public static final String KEY_NFC_TAG = "nfcTag";
-
   private TextView instructionView;
   private TextView nfcLabelView;
   private View saveButton;
