@@ -26,7 +26,6 @@ import com.squareup.okhttp.Credentials;
 import com.squareup.okhttp.MediaType;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
-import com.squareup.okhttp.RequestBody;
 import com.squareup.okhttp.Response;
 
 import java.io.File;
@@ -116,7 +115,7 @@ public class MainActivity extends Activity {
     // Enable foreground dispatch for getting intent from NFC event
     NfcAdapter nfcAdapter = NfcAdapter.getDefaultAdapter(this);
     nfcAdapter.enableForegroundDispatch(
-            this, pendingIntent, new IntentFilter[]{filter}, this.techList);
+        this, pendingIntent, new IntentFilter[]{filter}, this.techList);
   }
 
   @Override
@@ -179,12 +178,10 @@ public class MainActivity extends Activity {
       return;
     }
 
-    String json = "{\"text\":\"" + text + "\"}";
+    String url = "https://stream.watsonplatform.net/text-to-speech/api/v1/synthesize?accept=audio/wav&text=" + urlEncode(text) + "&voice=en-US_AllisonVoice";
     Request request = new Request.Builder()
-        .url("https://stream.watsonplatform.net/text-to-speech/api/v1/synthesize")
-        .addHeader("Content-Type", "application/json")
-        .addHeader("Accept", "audio/wav")
-        .post(RequestBody.create(MEDIA_TYPE_JSON, json))
+        .url(url)
+        .get()
         .build();
 
     client.newCall(request).enqueue(new Callback() {
@@ -221,13 +218,17 @@ public class MainActivity extends Activity {
       dir.mkdir();
     }
 
-    String filename = "output.wav";
-    try {
-      filename = URLEncoder.encode(text, "utf-8") + ".wav";
-    } catch (UnsupportedEncodingException e) {
-      Log.e(TAG, "Error encoding filename" + e);
-    }
+    String filename = urlEncode(text) + ".wav";
     return new File(dir, filename);
+  }
+
+  private String urlEncode(String text) {
+    try {
+      return URLEncoder.encode(text, "utf-8");
+    } catch (UnsupportedEncodingException e) {
+      Log.e(TAG, "Error encoding text" + e);
+    }
+    return text;
   }
 
   private void writeToFile(InputStream input, File file) throws IOException {
