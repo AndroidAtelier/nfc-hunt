@@ -34,7 +34,8 @@ import java.util.HashMap;
 import static nl.qbusict.cupboard.CupboardFactory.cupboard;
 
 public class MainActivity extends Activity {
-  private static final String TAG = "nfc_hunt";
+
+  public static final String TAG = "nfc_hunt";
 
   private static final String USERNAME    = "9242bc24-02ac-45c0-bb2f-53f6f06ae7d9";
   private static final String PASSWORD    = "HxoKXnZqz4Qu";
@@ -53,6 +54,7 @@ public class MainActivity extends Activity {
   private TextView statusView;
 
   private SQLiteDatabase db;
+  Harman harman = new Harman();
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -68,17 +70,19 @@ public class MainActivity extends Activity {
     DatabaseUtility databaseUtility = new DatabaseUtility(this);
     db = databaseUtility.getWritableDatabase();
 
-    client.setAuthenticator(new Authenticator() {
-      @Override
-      public Request authenticate(Proxy proxy, Response response) throws IOException {
-        String credential = Credentials.basic(USERNAME, PASSWORD);
-        return response.request().newBuilder().header("Authorization", credential).build();
-      }
+    harman.initSession();
 
-      @Override
-      public Request authenticateProxy(Proxy proxy, Response response) throws IOException {
-        return null;
-      }
+    client.setAuthenticator(new Authenticator() {
+        @Override
+        public Request authenticate(Proxy proxy, Response response) throws IOException {
+            String credential = Credentials.basic(USERNAME, PASSWORD);
+            return response.request().newBuilder().header("Authorization", credential).build();
+        }
+
+        @Override
+        public Request authenticateProxy(Proxy proxy, Response response) throws IOException {
+            return null;
+        }
     });
 
   }
@@ -86,6 +90,7 @@ public class MainActivity extends Activity {
   @Override
   protected void onResume() {
     super.onResume();
+
     NFCUtil.enable(this);
   }
 
@@ -97,6 +102,12 @@ public class MainActivity extends Activity {
     NfcAdapter nfcAdapter = NfcAdapter.getDefaultAdapter(this);
     nfcAdapter.disableForegroundDispatch(this);
   }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        harman.closeSession();
+    }
 
   @Override
   protected void onNewIntent(Intent intent) {
@@ -143,6 +154,16 @@ public class MainActivity extends Activity {
     }
   }
 
+    public void connectHarman(View v) {
+        Log.e(TAG, "Harman connect button pressed");
+
+        harman.getDeviceList();
+        harman.addDeviceToSession();
+        harman.playFromUrlToSelectedSpeaker("http://tardis.nu/~sepideh/CorrectDuck.mp3");
+        //harman.playFromUrl("http://seonman.github.io/music/hyolyn.mp3");
+        //harman.playFromUrlToAllConnectedSpeakeres("https://drive.google.com/folderview?id=0B9p3bA8lBIFrfkVxRnFzNVl6NTZLWnlKdUhPbU9MdkJUUnh2b2RORmxyTTNmRTZOaGFXejg&usp=sharing");
+    }
+
   private void fetchSoundFile(String text) throws IOException {
     final File file = getSoundFile(text);
 
@@ -159,34 +180,38 @@ public class MainActivity extends Activity {
         .build();
 
     client.newCall(request).enqueue(new Callback() {
-      @Override public void onFailure(Request request, final IOException e) {
-        runOnUiThread(new Runnable() {
-          @Override
-          public void run() {
-            statusView.setText(e.getMessage());
-          }
-        });
-        Log.e(TAG, Log.getStackTraceString(e));
-      }
-
-      @Override public void onResponse(Response response) throws IOException {
-        if (!response.isSuccessful()) {
-          throw new IOException("Unexpected code " + response);
+        @Override
+        public void onFailure(Request request, final IOException e) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    statusView.setText(e.getMessage());
+                }
+            });
+            Log.e(TAG, Log.getStackTraceString(e));
         }
 
-        writeToFile(response.body().byteStream(), file);
-        Log.e(TAG, file.toString());
-        runOnUiThread(new Runnable() {
-          @Override
-          public void run() {
-            statusView.setText(R.string.fetched);
-          }
-        });
-      }
+        @Override
+        public void onResponse(Response response) throws IOException {
+            if (!response.isSuccessful()) {
+                throw new IOException("Unexpected code " + response);
+            }
+
+            writeToFile(response.body().byteStream(), file);
+            Log.e(TAG, file.toString());
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    statusView.setText(R.string.fetched);
+                }
+            });
+        }
     });
   }
 
-  private File getSoundFile(String text) {
+
+
+    private File getSoundFile(String text) {
     File dir = new File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "nfc_hunt");
     if (!dir.isDirectory()) {
       dir.mkdir();
