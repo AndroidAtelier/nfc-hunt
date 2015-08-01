@@ -36,6 +36,7 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.Proxy;
 import java.net.URLEncoder;
+import java.util.HashMap;
 
 public class MainActivity extends Activity {
   private static final String TAG = "nfc_hunt";
@@ -43,10 +44,19 @@ public class MainActivity extends Activity {
   public static final MediaType MEDIA_TYPE_JSON
       = MediaType.parse("application/json; charset=utf-8");
 
-  private static final String USERNAME = "9242bc24-02ac-45c0-bb2f-53f6f06ae7d9";
-  private static final String PASSWORD = "HxoKXnZqz4Qu";
+  private static final String USERNAME    = "9242bc24-02ac-45c0-bb2f-53f6f06ae7d9";
+  private static final String PASSWORD    = "HxoKXnZqz4Qu";
+  private static final String NFC_DUCK    = "0422957A712881";
+  private static final String NFC_SHOE    = "370700001A37D5";
+  private static final String NFC_FROG    = "04BB0B625D2B84";
+  private static final String NFC_MITT    = "3707000020E0A6";
+  private static final String NFC_HAT     = "370700001A3118";
+  private static final String NFC_TISSUES = "370700001A3353";
+  private static final HashMap<String, String> things = new HashMap<>();
+
 
   OkHttpClient client = new OkHttpClient();
+  OkHttpClient client2 = new OkHttpClient();
 
   private TextView textView;
   private TextView ttsInputView;
@@ -74,6 +84,7 @@ public class MainActivity extends Activity {
     textView = (TextView) findViewById(R.id.text);
     ttsInputView = (TextView) findViewById(R.id.tts_input);
     statusView = (TextView) findViewById(R.id.status);
+    populateThings();
 
     client.setAuthenticator(new Authenticator() {
       @Override
@@ -87,6 +98,7 @@ public class MainActivity extends Activity {
         return null;
       }
     });
+
   }
 
   @Override
@@ -104,7 +116,7 @@ public class MainActivity extends Activity {
     // Enable foreground dispatch for getting intent from NFC event
     NfcAdapter nfcAdapter = NfcAdapter.getDefaultAdapter(this);
     nfcAdapter.enableForegroundDispatch(
-        this, pendingIntent, new IntentFilter[]{filter}, this.techList);
+            this, pendingIntent, new IntentFilter[]{filter}, this.techList);
   }
 
   @Override
@@ -119,7 +131,13 @@ public class MainActivity extends Activity {
   @Override
   protected void onNewIntent(Intent intent) {
     if (intent.getAction().equals(NfcAdapter.ACTION_TAG_DISCOVERED)) {
-      textView.setText(ByteArrayToHexString(intent.getByteArrayExtra(NfcAdapter.EXTRA_ID)));
+      String nfcTag = ByteArrayToHexString(intent.getByteArrayExtra(NfcAdapter.EXTRA_ID));
+      String value = nfcTag;
+      if (things.containsKey(nfcTag)) {
+        value = things.get(nfcTag);
+      }
+      textView.setText(value);
+      Log.e(TAG, nfcTag);
     }
   }
 
@@ -220,5 +238,14 @@ public class MainActivity extends Activity {
     while ((len = input.read(buffer)) != -1) {
       output.write(buffer, 0, len);
     }
+  }
+
+  private void populateThings() {
+    things.put(NFC_DUCK, "Duck");
+    things.put(NFC_SHOE, "Shiny shoe");
+    things.put(NFC_FROG, "Frog");
+    things.put(NFC_MITT, "Oven mitt");
+    things.put(NFC_HAT, "Green hat");
+    things.put(NFC_TISSUES, "Tissue box");
   }
 }
