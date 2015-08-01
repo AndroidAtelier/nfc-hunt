@@ -8,4 +8,5 @@
   <string name="add_tag_instructions">Scan NFC tag to add or edit</string>
   <string name="save">Save</string>
   <string name="saved">%1$s saved</string>
+    <string name="btn_harman_connect_label">Connect to harman kardon Omni 10</string>
 </resources>

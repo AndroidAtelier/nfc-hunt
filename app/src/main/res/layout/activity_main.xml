@@ -32,4 +32,11 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     tools:context=".MainActivity"/>
+
+    <Button
+        android:id="@+id/btn_harman_connect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/btn_harman_connect_label"
+        android:onClick="connectHarman"/>
 </LinearLayout>
